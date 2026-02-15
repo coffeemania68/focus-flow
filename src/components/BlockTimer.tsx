@@ -14,6 +14,12 @@ export function BlockTimer({ durationMinutes, isActive, onComplete, onStart, blo
   const [remaining, setRemaining] = useState(totalSeconds);
   const [running, setRunning] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const remainingRef = useRef(totalSeconds);
+  const runningRef = useRef(false);
+  const onCompleteRef = useRef(onComplete);
+
+  // Keep refs in sync
+  onCompleteRef.current = onComplete;
 
   const progress = 1 - remaining / totalSeconds;
   const circumference = 2 * Math.PI * 45;
@@ -22,40 +28,62 @@ export function BlockTimer({ durationMinutes, isActive, onComplete, onStart, blo
   const minutes = Math.floor(remaining / 60);
   const seconds = remaining % 60;
 
+  // Reset only when blockId changes
   useEffect(() => {
+    remainingRef.current = totalSeconds;
     setRemaining(totalSeconds);
+    runningRef.current = false;
     setRunning(false);
+    if (intervalRef.current) clearInterval(intervalRef.current);
   }, [blockId, totalSeconds]);
 
-  useEffect(() => {
-    if (running && remaining > 0) {
-      intervalRef.current = setInterval(() => {
-        setRemaining((prev) => {
-          if (prev <= 1) {
-            setRunning(false);
-            onComplete();
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
+  const startInterval = useCallback(() => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    intervalRef.current = setInterval(() => {
+      remainingRef.current -= 1;
+      setRemaining(remainingRef.current);
+      if (remainingRef.current <= 0) {
+        clearInterval(intervalRef.current!);
+        runningRef.current = false;
+        setRunning(false);
+        onCompleteRef.current();
+      }
+    }, 1000);
+  }, []);
+
+  const stopInterval = useCallback(() => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
     }
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, [running, remaining, onComplete]);
+  }, []);
+
+  // Restart interval whenever running state changes (persists across re-renders)
+  useEffect(() => {
+    if (running && remainingRef.current > 0) {
+      startInterval();
+    } else {
+      stopInterval();
+    }
+    return stopInterval;
+  }, [running, startInterval, stopInterval]);
 
   const toggle = useCallback(() => {
-    if (!running && !isActive) {
+    if (!runningRef.current && !isActive) {
       onStart();
     }
-    setRunning((prev) => !prev);
-  }, [running, isActive, onStart]);
+    const next = !runningRef.current;
+    runningRef.current = next;
+    setRunning(next);
+  }, [isActive, onStart]);
 
   const reset = useCallback(() => {
+    stopInterval();
+    runningRef.current = false;
     setRunning(false);
+    remainingRef.current = totalSeconds;
     setRemaining(totalSeconds);
-  }, [totalSeconds]);
+  }, [totalSeconds, stopInterval]);
 
   const isUrgent = remaining < 300 && remaining > 0;
   const isDone = remaining === 0;
