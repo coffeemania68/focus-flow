@@ -7,13 +7,11 @@ export function ProhibitionWarning() {
   const [current, setCurrent] = useState(0);
 
   useEffect(() => {
-    // Show a random prohibition every 25 minutes
     const interval = setInterval(() => {
       setCurrent(Math.floor(Math.random() * PROHIBITIONS.length));
       setVisible(true);
     }, 25 * 60 * 1000);
 
-    // Show one on initial load after 5 seconds
     const timeout = setTimeout(() => {
       setCurrent(Math.floor(Math.random() * PROHIBITIONS.length));
       setVisible(true);
@@ -29,9 +27,9 @@ export function ProhibitionWarning() {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm animate-slide-up">
-      <div className="bg-card border border-destructive/50 rounded-2xl p-8 max-w-md mx-4 glow-warning text-center space-y-4">
-        <div className="w-16 h-16 mx-auto rounded-full bg-destructive/20 flex items-center justify-center animate-shake">
-          <ShieldAlert size={32} className="text-destructive" />
+      <div className="bg-card border border-warning/50 rounded-2xl p-8 max-w-md mx-4 glow-warning text-center space-y-4">
+        <div className="w-16 h-16 mx-auto rounded-full bg-warning/20 flex items-center justify-center animate-shake">
+          <ShieldAlert size={32} className="text-warning" />
         </div>
         <h2 className="text-xl font-bold text-foreground">⚠️ 금지사항 경고</h2>
         <p className="text-warning text-lg font-semibold">{PROHIBITIONS[current]}</p>
