@@ -1,11 +1,11 @@
-import { useState, useCallback } from "react";
-import { getTodayTemplate, DayTemplate, TOOLS_CONFIG, WEEKLY_GOALS, PROHIBITIONS } from "@/data/templates";
+import { useState, useCallback, useEffect } from "react";
+import { getTodayTemplate, DayTemplate, WEEKLY_GOALS } from "@/data/templates";
 import { DaySelector } from "@/components/DaySelector";
 import { WorkBlock } from "@/components/WorkBlock";
 import { LongformCheck } from "@/components/LongformCheck";
 import { FloatingNote } from "@/components/FloatingNote";
 import { ProhibitionWarning } from "@/components/ProhibitionWarning";
-import { Clock, Target, TrendingUp, Moon } from "lucide-react";
+import { Clock, Target, TrendingUp, Moon, Sun, MoonStar } from "lucide-react";
 
 const Index = () => {
   const [template, setTemplate] = useState<DayTemplate>(getTodayTemplate);
@@ -14,6 +14,19 @@ const Index = () => {
   const [longformDone, setLongformDone] = useState(false);
   const [showForceCheck, setShowForceCheck] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [dark, setDark] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("theme") === "dark";
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", dark);
+    localStorage.setItem("theme", dark ? "dark" : "light");
+  }, [dark]);
+
+  const totalMinutes = template.blocks.reduce((sum, b) => sum + b.durationMinutes, 0);
 
   const handleBlockComplete = useCallback((blockId: string) => {
     setCompletedBlocks((prev) => {
@@ -41,7 +54,6 @@ const Index = () => {
     setShowCelebration(false);
   }, []);
 
-  const totalMinutes = template.blocks.reduce((sum, b) => sum + b.durationMinutes, 0);
   const completedCount = completedBlocks.size;
   const progressPercent = template.blocks.length > 0 ? (completedCount / template.blocks.length) * 100 : 0;
 
@@ -94,7 +106,16 @@ const Index = () => {
               <h1 className="text-2xl font-bold text-gradient">FOCUS FLOW</h1>
               <p className="text-xs text-muted-foreground font-mono mt-1">지혜샘 복구 모드</p>
             </div>
-            <DaySelector selected={template} onSelect={handleDayChange} />
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setDark(!dark)}
+                className="p-2 rounded-lg bg-card border border-border text-muted-foreground hover:text-foreground transition-all"
+                title={dark ? "라이트 모드" : "다크 모드"}
+              >
+                {dark ? <Sun size={16} /> : <MoonStar size={16} />}
+              </button>
+              <DaySelector selected={template} onSelect={handleDayChange} />
+            </div>
           </div>
 
           {/* Day info with progress */}
