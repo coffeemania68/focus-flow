@@ -11,9 +11,10 @@ interface WorkBlockProps {
   onActivate: () => void;
   onComplete: () => void;
   onTimerEnd: () => void;
+  compact?: boolean;
 }
 
-export function WorkBlock({ block, index, isActive, isCompleted, onActivate, onComplete, onTimerEnd }: WorkBlockProps) {
+export function WorkBlock({ block, index, isActive, isCompleted, onActivate, onComplete, onTimerEnd, compact }: WorkBlockProps) {
   const [expanded, setExpanded] = useState(isActive);
   const [checked, setChecked] = useState(false);
 
@@ -110,6 +111,8 @@ export function WorkBlock({ block, index, isActive, isCompleted, onActivate, onC
               onComplete={handleTimerComplete}
               onStart={onActivate}
               blockId={block.id}
+              blockTitle={block.title}
+              compact={compact}
             />
 
             {isActive && !isCompleted && (
