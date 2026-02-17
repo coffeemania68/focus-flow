@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useRef, useEffect } from "react";
 import { Play, Pause, RotateCcw, CheckCircle2 } from "lucide-react";
-import { dispatchBlockNotification } from "./BlockNotification";
+import { useTimer } from "@/contexts/TimerContext";
 
 interface BlockTimerProps {
   durationMinutes: number;
@@ -13,97 +13,54 @@ interface BlockTimerProps {
 }
 
 export function BlockTimer({ durationMinutes, isActive, onComplete, onStart, blockId, blockTitle, compact }: BlockTimerProps) {
-  const totalSeconds = durationMinutes * 60;
-  const [remaining, setRemaining] = useState(totalSeconds);
-  const [running, setRunning] = useState(false);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const remainingRef = useRef(totalSeconds);
-  const runningRef = useRef(false);
-  const onCompleteRef = useRef(onComplete);
-  const preAlertFiredRef = useRef(false);
+  const {
+    remaining,
+    isRunning,
+    activeBlockId,
+    startTimer,
+    pauseTimer,
+    resumeTimer,
+    resetTimer
+  } = useTimer();
 
-  // Keep refs in sync
+  const isCurrentTimer = activeBlockId === blockId;
+  const displaySeconds = isCurrentTimer ? remaining : durationMinutes * 60;
+
+  const minutes = Math.floor(displaySeconds / 60);
+  const seconds = displaySeconds % 60;
+
+  const onCompleteRef = useRef(onComplete);
   onCompleteRef.current = onComplete;
 
-  const progress = 1 - remaining / totalSeconds;
-  const circumference = 2 * Math.PI * 45;
-  const dashOffset = circumference * (1 - progress);
-
-  const minutes = Math.floor(remaining / 60);
-  const seconds = remaining % 60;
-
-  // Reset only when blockId changes
+  // Trigger onComplete when timer reaches 0
   useEffect(() => {
-    remainingRef.current = totalSeconds;
-    setRemaining(totalSeconds);
-    runningRef.current = false;
-    setRunning(false);
-    preAlertFiredRef.current = false;
-    if (intervalRef.current) clearInterval(intervalRef.current);
-  }, [blockId, totalSeconds]);
-
-  const startInterval = useCallback(() => {
-    if (intervalRef.current) clearInterval(intervalRef.current);
-    intervalRef.current = setInterval(() => {
-      remainingRef.current -= 1;
-      setRemaining(remainingRef.current);
-
-      // 5-min pre-alert
-      if (
-        remainingRef.current === 300 &&
-        !preAlertFiredRef.current &&
-        localStorage.getItem("pre-alert") === "true"
-      ) {
-        preAlertFiredRef.current = true;
-        dispatchBlockNotification(blockTitle || "다음 블록", "pre");
-      }
-
-      if (remainingRef.current <= 0) {
-        clearInterval(intervalRef.current!);
-        runningRef.current = false;
-        setRunning(false);
-        dispatchBlockNotification(blockTitle || "블록 완료", "start");
-        onCompleteRef.current();
-      }
-    }, 1000);
-  }, []);
-
-  const stopInterval = useCallback(() => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
+    if (isCurrentTimer && remaining === 0) {
+      onCompleteRef.current();
     }
-  }, []);
+  }, [isCurrentTimer, remaining]);
 
-  // Restart interval whenever running state changes (persists across re-renders)
-  useEffect(() => {
-    if (running && remainingRef.current > 0) {
-      startInterval();
+  const toggle = () => {
+    if (isCurrentTimer) {
+      if (isRunning) pauseTimer();
+      else resumeTimer();
     } else {
-      stopInterval();
+      onStart(); // Update active block in parent
+      startTimer(blockId, durationMinutes, blockTitle);
     }
-    return stopInterval;
-  }, [running, startInterval, stopInterval]);
+  };
 
-  const toggle = useCallback(() => {
-    if (!runningRef.current && !isActive) {
-      onStart();
+  const reset = () => {
+    if (isCurrentTimer) {
+      resetTimer();
     }
-    const next = !runningRef.current;
-    runningRef.current = next;
-    setRunning(next);
-  }, [isActive, onStart]);
+  };
 
-  const reset = useCallback(() => {
-    stopInterval();
-    runningRef.current = false;
-    setRunning(false);
-    remainingRef.current = totalSeconds;
-    setRemaining(totalSeconds);
-  }, [totalSeconds, stopInterval]);
+  const isUrgent = displaySeconds < 300 && displaySeconds > 0;
+  const isDone = displaySeconds === 0 && isCurrentTimer; // Only consider done if it was the running timer
 
-  const isUrgent = remaining < 300 && remaining > 0;
-  const isDone = remaining === 0;
+  const circumference = 2 * Math.PI * 45;
+  const progress = 1 - displaySeconds / (durationMinutes * 60);
+  const dashOffset = circumference * (1 - progress);
 
   if (compact) {
     return (
@@ -114,11 +71,10 @@ export function BlockTimer({ durationMinutes, isActive, onComplete, onStart, blo
         {!isDone && (
           <button
             onClick={toggle}
-            className={`p-1 rounded transition-all ${
-              running ? "text-warning" : "text-primary"
-            }`}
+            className={`p-1 rounded transition-all ${isCurrentTimer && isRunning ? "text-warning" : "text-primary"
+              }`}
           >
-            {running ? <Pause size={12} /> : <Play size={12} />}
+            {isCurrentTimer && isRunning ? <Pause size={12} /> : <Play size={12} />}
           </button>
         )}
       </div>
@@ -158,13 +114,12 @@ export function BlockTimer({ durationMinutes, isActive, onComplete, onStart, blo
           <>
             <button
               onClick={toggle}
-              className={`p-2 rounded-lg transition-all ${
-                running
+              className={`p-2 rounded-lg transition-all ${isCurrentTimer && isRunning
                   ? "bg-warning/20 text-warning hover:bg-warning/30"
                   : "bg-primary/20 text-primary hover:bg-primary/30"
-              }`}
+                }`}
             >
-              {running ? <Pause size={16} /> : <Play size={16} />}
+              {isCurrentTimer && isRunning ? <Pause size={16} /> : <Play size={16} />}
             </button>
             <button
               onClick={reset}

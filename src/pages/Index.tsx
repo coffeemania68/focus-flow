@@ -9,10 +9,12 @@ import { ViewModeToggle } from "@/components/ViewModeToggle";
 import { BlockTimer } from "@/components/BlockTimer";
 import { BlockNotification } from "@/components/BlockNotification";
 import { useViewMode } from "@/contexts/ViewModeContext";
+import { useTimer } from "@/contexts/TimerContext";
 import { Clock, Target, TrendingUp, Moon, Sun, MoonStar } from "lucide-react";
 
 const Index = () => {
   const { mode } = useViewMode();
+  const { stopTimer } = useTimer(); // Use Timer Context
   const [template, setTemplate] = useState<DayTemplate>(getTodayTemplate);
   const [activeBlock, setActiveBlock] = useState<number>(0);
   const [completedBlocks, setCompletedBlocks] = useState<Set<string>>(new Set());
@@ -42,7 +44,8 @@ const Index = () => {
     });
     setActiveBlock((prev) => Math.min(prev + 1, template.blocks.length - 1));
     setShowForceCheck(false);
-  }, [template.blocks.length]);
+    stopTimer(); // Reset timer context on block complete
+  }, [template.blocks.length, stopTimer]);
 
   const handleTimerEnd = useCallback(() => {
     setShowForceCheck(true);
@@ -55,7 +58,8 @@ const Index = () => {
     setLongformDone(false);
     setShowForceCheck(false);
     setShowCelebration(false);
-  }, []);
+    stopTimer(); // Reset timer context on day change
+  }, [stopTimer]);
 
   const completedCount = completedBlocks.size;
   const progressPercent = template.blocks.length > 0 ? (completedCount / template.blocks.length) * 100 : 0;
@@ -141,7 +145,7 @@ const Index = () => {
                       durationMinutes={activeBlockData.durationMinutes}
                       isActive={true}
                       onComplete={handleTimerEnd}
-                      onStart={() => {}}
+                      onStart={() => { }}
                       blockId={activeBlockData.id}
                       blockTitle={activeBlockData.title}
                       compact={true}
@@ -260,9 +264,8 @@ const Index = () => {
                   <button
                     key={day}
                     onClick={() => handleDayChange(t)}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs transition-all ${
-                      isCurrent ? "bg-primary/10 border border-primary/30 text-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"
-                    }`}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs transition-all ${isCurrent ? "bg-primary/10 border border-primary/30 text-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"
+                      }`}
                   >
                     <span className="font-medium">{t.emoji} {t.dayKo}</span>
                     <span>{t.label}</span>
