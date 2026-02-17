@@ -8,6 +8,7 @@ import { ProhibitionWarning } from "@/components/ProhibitionWarning";
 import { ViewModeToggle } from "@/components/ViewModeToggle";
 import { BlockTimer } from "@/components/BlockTimer";
 import { BlockNotification } from "@/components/BlockNotification";
+import { BrainPanel } from "@/components/BrainPanel";
 import { useViewMode } from "@/contexts/ViewModeContext";
 import { useTimer } from "@/contexts/TimerContext";
 import { Clock, Target, TrendingUp, Moon, Sun, MoonStar } from "lucide-react";
@@ -119,6 +120,7 @@ const Index = () => {
             <div className="flex items-center gap-2">
               <ViewModeToggle />
               <BlockNotification blocks={template.blocks} activeBlock={activeBlock} />
+              <BrainPanel />
               <button
                 onClick={() => setDark(!dark)}
                 className="p-2 rounded-lg bg-card border border-border text-muted-foreground hover:text-foreground transition-all"
