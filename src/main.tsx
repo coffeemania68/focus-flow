@@ -3,9 +3,12 @@ import App from "./App.tsx";
 import "./index.css";
 
 import { TimerProvider } from "./contexts/TimerContext";
+import { DailyScheduleProvider } from "./contexts/DailyScheduleContext";
 
 createRoot(document.getElementById("root")!).render(
     <TimerProvider>
-        <App />
+        <DailyScheduleProvider>
+            <App />
+        </DailyScheduleProvider>
     </TimerProvider>
 );

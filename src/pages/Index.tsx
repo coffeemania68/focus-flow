@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { getTodayTemplate, DayTemplate, WEEKLY_GOALS, templates as allTemplates } from "@/data/templates";
+import { DayTemplate, WEEKLY_GOALS, templates as allTemplates } from "@/data/templates";
 import { DaySelector } from "@/components/DaySelector";
 import { WorkBlock } from "@/components/WorkBlock";
 import { LongformCheck } from "@/components/LongformCheck";
@@ -11,14 +11,21 @@ import { BlockNotification } from "@/components/BlockNotification";
 import { BrainPanel } from "@/components/BrainPanel";
 import { useViewMode } from "@/contexts/ViewModeContext";
 import { useTimer } from "@/contexts/TimerContext";
+import { useDailySchedule } from "@/contexts/DailyScheduleContext";
 import { Clock, Target, TrendingUp, Moon, Sun, MoonStar } from "lucide-react";
 
 const Index = () => {
   const { mode } = useViewMode();
-  const { stopTimer } = useTimer(); // Use Timer Context
-  const [template, setTemplate] = useState<DayTemplate>(getTodayTemplate);
-  const [activeBlock, setActiveBlock] = useState<number>(0);
-  const [completedBlocks, setCompletedBlocks] = useState<Set<string>>(new Set());
+  const { stopTimer } = useTimer();
+  const {
+    template,
+    activeBlock,
+    setActiveBlock,
+    completedBlocks,
+    markBlockComplete,
+    resetDayState,
+  } = useDailySchedule();
+
   const [longformDone, setLongformDone] = useState(false);
   const [showForceCheck, setShowForceCheck] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
@@ -35,32 +42,27 @@ const Index = () => {
   }, [dark]);
 
   const handleBlockComplete = useCallback((blockId: string) => {
-    setCompletedBlocks((prev) => {
-      const next = new Set(prev).add(blockId);
-      if (next.size === template.blocks.length) {
-        setShowCelebration(true);
-        setTimeout(() => setShowCelebration(false), 3000);
-      }
-      return next;
-    });
-    setActiveBlock((prev) => Math.min(prev + 1, template.blocks.length - 1));
+    markBlockComplete(blockId);
+    const nextSize = completedBlocks.size + 1;
+    if (nextSize === template.blocks.length) {
+      setShowCelebration(true);
+      setTimeout(() => setShowCelebration(false), 3000);
+    }
     setShowForceCheck(false);
-    stopTimer(); // Reset timer context on block complete
-  }, [template.blocks.length, stopTimer]);
+    stopTimer();
+  }, [completedBlocks.size, template.blocks.length, markBlockComplete, stopTimer]);
 
   const handleTimerEnd = useCallback(() => {
     setShowForceCheck(true);
   }, []);
 
   const handleDayChange = useCallback((t: DayTemplate) => {
-    setTemplate(t);
-    setActiveBlock(0);
-    setCompletedBlocks(new Set());
+    resetDayState(t);
     setLongformDone(false);
     setShowForceCheck(false);
     setShowCelebration(false);
-    stopTimer(); // Reset timer context on day change
-  }, [stopTimer]);
+    stopTimer();
+  }, [resetDayState, stopTimer]);
 
   const completedCount = completedBlocks.size;
   const progressPercent = template.blocks.length > 0 ? (completedCount / template.blocks.length) * 100 : 0;
@@ -68,7 +70,7 @@ const Index = () => {
   const isSmall = mode === "small";
   const isLarge = mode === "large";
 
-  const activeBlockData = template.blocks[activeBlock];
+  const activeBlockData = template.blocks[Math.min(activeBlock, template.blocks.length - 1)];
 
   return (
     <div className="min-h-screen">
@@ -99,9 +101,9 @@ const Index = () => {
             <div className="text-4xl">⏰</div>
             <h2 className="text-lg font-bold text-foreground">블록 시간 종료!</h2>
             <p className="text-sm text-muted-foreground">작업을 완료 체크하고 다음 블록으로 이동하세요.</p>
-            <button
-              onClick={() => handleBlockComplete(template.blocks[activeBlock].id)}
-              className="px-6 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-all"
+              <button
+                onClick={() => handleBlockComplete(activeBlockData.id)}
+                className="px-6 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-all"
             >
               ✅ 완료하고 넘어가기
             </button>
